@@ -1,5 +1,5 @@
 ---
-title: "P8105 HW2"
+title: "P8105 HW3"
 author: "Elaine Yanxi Chen"
 date: "`r Sys.Date()`"
 output: github_document
@@ -11,245 +11,56 @@ First we load the packages necessary to knit this document.
 
 ```{r packages and settings, message = FALSE}
 library(tidyverse)
-library(readxl)
-knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(ggridges)
+library(patchwork)
+
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
 ```
 
 
-# Problem 1: NYC Transit
+# Problem 1: Instacart data
 
-* We first read in the csv file and converted the column types for route8 to route 11 from double to characters to be consistent with the rest of the route variables.
+## Import data
 
-* Retain line, station, name, station latitute/longtitude, routes served, entry, vending, entrance type, and ADA compliance
-
-* Convert the entry variable from character to a logical variable
-
-```{r load dataset}
-nyc_transit = read_csv("data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
-                       col_types = cols(Route8 = "c", Route9 = "c", Route10 = "c", Route11 = "c")) %>% 
-  janitor::clean_names() %>% 
-  select(line:ada, -c(exit_only, staffing, staff_hours)) %>% 
-  mutate(entry = if_else(entry == "YES", TRUE, FALSE))
+```{r load instacart}
+library(p8105.datasets)
+data("instacart")
 ```
 
-trans_ent = 
-  read_csv(
-    "data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
-    col_types = ) 
+## Describe the dataset
 
-Now we describe the characteristics of this nyc_transit dataset:
+* This dataset contains `r nrow(instacart)` rows and `r ncol(instacart)` columns, with each row representing a single product from an instacart order.
 
-* This datasets includes `r ncol(nyc_transit)` variables for `r nrow(nyc_transit)` observations, however, there seems to some repeating observations in this dataset. 
+* Variables include identifiers for user, order, and product; the order in which each product was added to the cart. There are several order-level variables, describing the day and time of the order, and number of days since prior order. Then there are several item-specific variables, describing the product name (e.g. Yogurt, Avocado), department (e.g. dairy and eggs, produce), and aisle (e.g. yogurt, fresh fruits), and whether the item has been ordered by this user in the past. 
 
-* The dataset contains variables such as the subway line, station names, the station location expressed in latitude and longitude. 
+* In total, there are `r instacart %>% select(product_id) %>% distinct %>% count` products found in `r instacart %>% select(user_id, order_id) %>% distinct %>% count` orders from `r instacart %>% select(user_id) %>% distinct %>% count` distinct users.
 
-* The dataset was first imported as a csv file, before the names were cleaned using the `janitor` package so that all variables and observations follow the snake case convention. We then selected only the variables of interest, before mutating the entry variable from a character variable with `YES` or `NO` responses to a logical variable with `TRUE` or `FALSE` responses. 
+## Answer questions
 
-* The data is not tidy since there is quite a bit of repeat with routes served.
-
-Next, we will use the following code chunks to answer some questions about the dataset. 
-
-```{r distinct dataset}
-nyc_transit_dist = nyc_transit %>% 
-  distinct(line, station_name)
-```
-
-* There are `r nrow(nyc_transit_dist)` distinct stations in NYC subway. 
-
-```{r ada compliant}
-nyc_transit_ada = nyc_transit %>% 
-  filter(ada == TRUE) %>% 
-  distinct(line, station_name) 
-```
-
-* There are `r nrow(nyc_transit_ada)` stations that are ADA compliant.
-
-```{r entrance}
-nyc_transit_ent = nyc_transit %>% 
-  filter(vending == "NO") %>% 
-  pull(entry) %>% 
-  mean
-```
-
-* The proportion of station entrances/exits without vending allow entrance is `r round(nyc_transit_ent * 100, 1)`%.
-
-Finally, we reformat data so that the route number and route name are distinct variables.
-
-```{r distinct A}
-nyc_transit_a = nyc_transit %>% 
-  pivot_longer(
-    route1:route11,
-    names_to = "route_number",
-    values_to = "route"
-  ) %>% 
-  filter(route == "A") %>% 
-  distinct(line, station_name)
-```
-
-There are `r nrow(nyc_transit_a)` distinct stations that serve the A train.
+* How many aisles are there, and which aisles are the most items ordered from?
 
 ```{r}
-nyc_transit_a_ada = nyc_transit %>% 
-  pivot_longer(
-    route1:route11,
-    names_to = "route_number",
-    values_to = "route"
-  ) %>% 
-  filter(route == "A", ada == TRUE) %>% 
-  distinct(line, station_name)
+instacart %>% 
+  count(aisle) %>% 
+  arrange(desc(n))
 ```
 
-There are `r nrow(nyc_transit_a_ada)` distinct stations that serve the A train and are ADA compliant.
-
-# Problem 2: Mr. Trash Wheel
-
-## Import Mr. Trash Wheel
-
-We will first read the excel sheet Mr. Trash Wheel from the Excel file and clean it.
-
-```{r}
-mr_trash = read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:N550") %>% 
-  janitor::clean_names() %>% 
-  drop_na(dumpster) %>% 
-  mutate(sports_balls = as.integer(round(sports_balls, 0)))
-```
-
-## Import Professor Trash Wheel
-
-We will then use a similar process to import, clean, and organize the data for Professor Trash Wheel. 
-
-```{r}
-prof_trash = read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:M97") %>% 
-  janitor::clean_names() %>% 
-  drop_na(dumpster) 
-```
-
-## Merge Trash Wheel data
-
-Now we will assign an additional variable to keep track of which Trash Wheel is which, then combine the two datasets.
-
-```{r}
-mr_trash = mr_trash %>% mutate(trash_wheel = "mr")
-
-prof_trash = prof_trash %>% mutate(trash_wheel = "prof",
-                      year = as.character(year))
-
-joint_trash = bind_rows(mr_trash, prof_trash) %>% janitor::clean_names()
-```
-
-## Describe the datasets
-
-Below we describe some key characteristics of this joint dataset.
-
-* There are `r nrow(joint_trash)` variables for `r ncol(joint_trash)` observations.
-
-* These observations include the time, amount, and the type of trash collected. In addition, the number of Maryland homes powered by the incinerated trash are also included in the dataset. 
-
-  * The month, year, and specific data were used to describe the time when trash were collected. 
-
-  * The amount of trash includes the weight in tons and the volume in cubic yards. 
-
-  * The type of trash includes plastic bottle, polystyrene, cigarette butts, glass bottles, grocery bags, and chip bags from both Mr Trash Wheel and Professor Trash Wheel, and sports balls from Mr Trash Wheel.
-
-The total weight of trash collected by Professor Trash Wheel can be found with the following code:
-
-```{r}
-joint_trash %>% filter(trash_wheel == "prof") %>% select(weight_tons) %>% sum
-```
-
-The total weight is 190.12 tons.
-
-The total number of sports balls collected by Mr. Trash Wheel in 2020 can be found by the following code:
-
-```{r}
-joint_trash %>% filter(trash_wheel == "mr", year == "2020") %>% 
-  select(sports_balls) %>% sum
-```
-
-The total number of sports balls collected is 856. 
-
-# Problem 3: FiveThirtyEight
-
-## Clean the data in pols.csv
-
-```{r load pols}
-pols = read_csv("data/fivethirtyeight_datasets/pols-month.csv") %>% 
-  janitor::clean_names() %>% 
-  separate(col = mon, into = c("year", "month", "day"), sep = "-", convert = TRUE) %>% 
-  mutate(month = tolower(month.abb[as.numeric(month)])) %>% 
-  pivot_longer(c(prez_gop, prez_dem), names_to = "president", names_prefix = "prez_") %>% 
-  filter(value != "0") %>% 
-  select(-c("day", "value"))
-```
-
-Note that there are 5 observations in this dataset with `prez_gop` == 2, which according to the coding should only be in (1 == yes, 0 == no). 
-
-## Clean the data in snp.csv
-
-```{r load snp, warning = FALSE}
-snp = read_csv("data/fivethirtyeight_datasets/snp.csv") %>%
-  janitor::clean_names() %>% 
-  separate(col = date, into = c("month", "day", "year"), sep = "/" , convert = TRUE) %>% 
-  mutate(month = tolower(month.abb[as.numeric(month)]),
-         year = case_when(year < 16 ~ year + 2000,
-                          year > 16 ~ year + 1900)) %>% 
-  arrange(year, month) %>% 
-  select(year, month, everything(), -"day")
-```
-
-## Tidy the unemployment data
-
-```{r load unemployment, warning = FALSE}
-unemployment = read_csv("data/fivethirtyeight_datasets/unemployment.csv") %>%
-  janitor::clean_names() %>% 
-  pivot_longer(jan:dec, names_to = "month", values_to = "unemploy_perc")
-```
-
-## Join the three datasets
-
-First we will merge `snp` into `pols`.
-We can merge by the variables `year` and `month`. We will first need to makes sure the merging variables are of the same types. 
-
-```{r pols_snp}
-pols_snp = left_join(pols, snp)
-```
-
-Then we merge the `unemployment` dataset into the resulting `pols_snp`.
-
-```{r}
-final_merge = left_join(pols_snp, unemployment)
-```
-
-## Describe the datasets
-
-### `pols`
-
-* There are `r ncol(pols)` variables for `r nrow(pols)` observations in this dataset. 
-
-* The dataset describes the time (`year` and `month`) and the government situation in the US, including the the number of governors, senators, representatives of the Republican and the Democratic Party, and the party that the president was in on the associated date. 
-
-* The dataset spans `r max(pols$year) - min(pols$year)` years between years `r range(pols$year)`.
-
-### `snp`
-
-* There are `r ncol(snp)` variables for `r nrow(snp)` observations in this dataset. 
-
-* The dataset describes the time (`year` and `month`) and the variable `close`, the closing values of the Standard & Poor's stock market index on the associated date, which is often used as a representative measure of stock market as a whole.
-
-* The dataset spans `r max(snp$year) - min(snp$year)` years between years `r range(snp$year)`.
-
-### `unemployment`
-
-* There are `r ncol(unemployment)` variables for `r nrow(unemployment)` observations in this dataset. 
-
-* The dataset describes the time (`year` and `month`) and the variable `unemploy_perc`, which indicates the percentage of unemployment in the associated month and year.
-
-* The dataset spans `r max(unemployment$year) - min(unemployment$year)` years between years `r range(unemployment$year)`.
-
-### The merged dataset: `final_merge`
-
-* There are `r ncol(final_merge)` variables for `r nrow(final_merge)` observations in this dataset. 
-
-* The dataset describes the time (`year` and `month`), the government composition in the US (number of Democrats and Republicans as representatives, governors, and senates, and the party that the President belongs to), the measure of the stock market (`close`), and the percentage of unemployment in the US on the associated dates (`unemploy_perc`).
-
-* The dataset spans `r max(final_merge$year) - min(final_merge$year)` years between years `r range(final_merge$year)`.
+There are `r instacart %>% select(aisle_id) %>% distinct %>% count` aisles, and the most items are ordered from the fresh vegetables and fresh fruits aisles. 
