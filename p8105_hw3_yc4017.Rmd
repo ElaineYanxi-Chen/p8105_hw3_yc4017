@@ -36,7 +36,7 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 
 
-# Problem 1: Instacart data
+# Problem 1: `instacart`
 
 ## Import data
 
@@ -104,3 +104,45 @@ instacart %>%
 
 Note that there are two names: Pink Lady Apples and Pink Lady (Cripps) Apples. Not sure if they are the same product, but they do have different `product_id`, so will use that to filter (both give the same tibble).
 
+
+# Problem 2: Accelerometer
+
+## Import and tidy data
+
+```{r clean accel}
+accel_data = read_csv(file = "./data/accel_data.csv") %>% 
+  janitor::clean_names()
+
+accel_df = accel_data %>% 
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "min_of_day",
+    values_to = "activity_count",
+    names_prefix = "activity_"
+  ) %>% 
+  mutate(weekend = case_when(
+    day %in% c("Saturday", "Sunday") ~ "weekend",
+    day != c("Saturday", "Sunday") ~ "weekday",
+    TRUE ~""
+  ),
+  min_of_day = as.numeric(min_of_day))
+
+
+```
+
+* Load, tidy, and otherwise wrangle the data. 
+
+  * Dataset was transformed using `pivot_longer` so that each row represents the activity count for a single minute in a 24-hour day.
+
+* Include all originally observed variables and values.
+
+* Include a weekday vs weekend variable.
+
+* Encode data with reasonable variable classes.
+
+  * `day` and `weekend` are coded as characters, while the rest of the variables are coded as numeric.
+
+
+## Describe the data
+
+Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
