@@ -41,7 +41,6 @@ scale_fill_discrete = scale_fill_viridis_d
 ## Import data
 
 ```{r load instacart}
-library(p8105.datasets)
 data("instacart")
 ```
 
@@ -202,7 +201,8 @@ accel_df %>% group_by(week, day_id) %>%
   labs(
     title = "24-hour activity time course plot",
     x = "Hour of the day (hr)",
-    y = "Activity count"
+    y = "Activity count",
+    colour = "Day of the week"
   ) +
    scale_x_continuous(
     breaks = c(0, 120, 240, 360, 480, 600, 720, 840, 960, 1080, 1200, 1320, 1440),
@@ -215,3 +215,20 @@ accel_df %>% group_by(week, day_id) %>%
 Minutes on the x-axis were converted to hours of the day to help better read and interpret the plot. The activity count is generally low (around 1000) from hours 0 - 6 in the morning, which corresponds to the time of sleep. The activity count picks up from around 6 am, and is much higher during the day till around hour 23 or 11 pm at night. There are several notable activity count peaks. There are several peaks around 7 - 8 am, 10 am - 12 pm, around 4 pm, and most notably, around 8 - 10 pm. 
 
 
+# Problem 3: NY NOAA data
+
+## Import data
+
+```{r}
+data("ny_noaa")
+```
+
+## Exploration of the dataset
+
+* This dataset contains `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns, with each row representing the weather parameters recorded from a weather station in the state of New York on the specific date. 
+
+* Variables include identifiers for the weather station (`id`), the date of observation (`date`), and the corresponding weather observations. 
+
+* There are several observation-level variables, describing the amount of precipitation (`prcp`), the amount of snowfall and snow depth (`snow` and `snwd`), and the minimum and maximum temperature of the day (`tmin` and `tmax`). 
+
+* In total, there are weather observations recorded from `r ny_noaa %>% select(id) %>% distinct %>% count` weather stations in the state of New York from January 1st, 1981 to December 31st, 2010. 
