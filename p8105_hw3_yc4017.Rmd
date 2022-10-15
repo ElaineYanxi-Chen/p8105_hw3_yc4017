@@ -155,3 +155,39 @@ describing which day (`day_id`)or which week (`week`) the activity count is from
 
 * In total, there are activity counts from `r accel_df %>% select(min_of_day) %>% distinct %>% count` minutes each day for a total of `r accel_df %>% select(day_id) %>% distinct %>% count` days spanning `r accel_df %>% select(week) %>% distinct %>% count` weeks.
 
+
+## Total activity over the day
+
+We want to aggregate across minutes to create a total activity variable for each day and show results in a table.
+
+```{r}
+accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+  knitr::kable()
+```
+
+To look at trends, it is better to pipe the results into  `ggplot2`.
+
+First we can look at whether the total activity changes as the weeks go on. It does not seem like there is any obvious trend, maybe a slight decrease of total activity near the end of five-week period. There are two notable days with very low total activity.  
+```{r}
+accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+  ggplot(aes(x = day_id, y = total_activity)) +
+  geom_point() + geom_line()
+```
+
+Next, we can compare weekday over weekend. However, this comparison is also significantly affected by the two Saturday outliers. 
+
+```{r}
+accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+  ggplot(aes(x = weekend, y = total_activity)) +
+  geom_boxplot()
+```
+
+We can also compare each day of the week. If we look at this plot, it seems like in general, weekends (Fridays, Saturdays, Sundays) have slightly higher total activity than the weekdays. We see the Saturday is significantly affected by the two extremely low measurements. 
+
+```{r}
+accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+  ggplot(aes(x = dow, y = total_activity)) +
+  geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
