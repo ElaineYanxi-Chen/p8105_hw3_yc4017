@@ -249,5 +249,72 @@ Because `ny_noaa` is a massive dataset, best to work with a subset of small rand
 ny_noaa_sam = 
   ny_noaa %>% 
   sample_n(2000) 
+
+ny_noaa_sam = ny_noaa_sam %>% 
+ separate(col = date, into = c("year", "month", "day"), sep = "-", convert = TRUE) 
+
+ny_noaa_sam = ny_noaa_sam %>% 
+  mutate(prcp = prcp / 10,
+         tmax = tmax / 10,
+         tmin = tmin / 10,
+         month = tolower(month.abb[as.numeric(month)]))
+```
+
+Because `prcp`, `tmax` and `tmin` were recorded in tenth of the desired units (mm or degrees C), we first convert them to the reasonable units of mm or degrees C. For snowfall, the most commonly observed values is `r names(sort(-table(ny_noaa_sam$snow)))[1]`. This is because for most of the year there is no or very minimal snowfall in the state of New York, and record will only have non-zero values in late fall and winter seasons when snowfall actually occurs. 
+
+## Two-panel plot
+
+Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
+
+```{r}
+tmax_jan = ny_noaa_sam %>% 
+  filter(month == "jan") %>% 
+  group_by(id, year, month) %>% 
+  summarize(mean_tmax = mean(tmax, na.rm = TRUE)) %>% 
+  ggplot(aes(x = year, y = mean_tmax, colour = id)) + 
+  geom_line(alpha = .5) + 
+  theme(legend.position = "none")
+
+tmax_jul = ny_noaa_sam %>% 
+  filter(month == "jul") %>% 
+  group_by(id, year, month) %>% 
+  summarize(mean_tmax = mean(tmax)) %>% 
+  ggplot(aes(x = year, y = mean_tmax, colour = id)) + 
+  geom_line(alpha = .5) +
+  theme(legend.position = "none")
+
+tmax_jan + tmax_jul
+
+```
+
+Try this on the entire dataset
+
+```{r}
+weather_df = ny_noaa %>% 
+ separate(col = date, into = c("year", "month", "day"), sep = "-", convert = TRUE) 
+
+weather_df = weather_df %>% 
+  mutate(prcp = prcp / 10,
+         tmax = tmax / 10,
+         tmin = tmin / 10,
+         month = tolower(month.abb[as.numeric(month)]))
+
+tmax_jan = weather_df %>% 
+  filter(month == "jan") %>% 
+  group_by(id, year, month) %>% 
+  summarize(mean_tmax = mean(tmax, na.rm = TRUE)) %>% 
+  ggplot(aes(x = year, y = mean_tmax, colour = id)) + 
+  geom_line(alpha = .5) + 
+  theme(legend.position = "none")
+
+tmax_jul = weather_df %>% 
+  filter(month == "jul") %>% 
+  group_by(id, year, month) %>% 
+  summarize(mean_tmax = mean(tmax, na.rm = TRUE)) %>% 
+  ggplot(aes(x = year, y = mean_tmax, colour = id)) + 
+  geom_line(alpha = .5) +
+  theme(legend.position = "none")
+
+tmax_jan + tmax_jul
 ```
 
