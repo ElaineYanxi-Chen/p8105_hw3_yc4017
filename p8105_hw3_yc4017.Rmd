@@ -298,12 +298,12 @@ tmax_avg = weather_df %>%
   scale_y_continuous(
     breaks = c(-15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40)
   ) + 
-  theme(axis.text.x = element_text(angle = 60, vjust = 0.5, hjust = 1))
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.5, hjust = 1))
 
 tmax_avg
 ```
 
-It seems that the average maximum temperature for both January and July are oscillating on a 2-year cycle. One can also argue that there is a slight increase from 1980 to 2010. More extreme values; also some outliers;
+The average maximum temperature in January ranges around -10 C to 10 C, while in July it ranges around 22 C to 32 C. It is interesting to note that the average maximum temperature for both January and July seem to oscillate up and down around a centred value of 0 C for January and roughly 27 C for July. One can also argue that there is a very slight increase of maximum average temperature for both months from 1980 to 2010: the highest and the lowest maximum average temperature seem to be getting more extreme, possibly due to climate change. There are several outliers in this plot, for example, January 2014 and July 1987. 
 
 
 ## Two-panel for `tmax` vs `tmin` and snowfall distribution
@@ -329,7 +329,7 @@ tmin_tmax = weather_df %>%
   scale_y_continuous(
     breaks = c(-60, -40, -20, 0, 20, 40, 60)
   ) + 
-  theme(legend.position = "bottom")
+  theme(legend.position = "right")
 
 snowfall_dist = weather_df %>% 
   filter(snow == c(1:99)) %>% 
