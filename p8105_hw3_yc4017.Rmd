@@ -120,14 +120,15 @@ accel_df = accel_data %>%
     names_prefix = "activity_"
   ) %>% 
   rename(dow = day) %>% 
-  mutate(weekend = case_when(
+  mutate(
+    dow = as.factor(dow),
+    dow = fct_relevel(dow, "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+    weekend = case_when(
     dow %in% c("Saturday", "Sunday") ~ "weekend",
     dow != c("Saturday", "Sunday") ~ "weekday",
     TRUE ~""
   ),
   min_of_day = as.numeric(min_of_day))
-
-
 ```
 
 * Load, tidy, and otherwise wrangle the data. 
@@ -160,46 +161,67 @@ describing which day (`day_id`)or which week (`week`) the activity count is from
 We want to aggregate across minutes to create a total activity variable for each day and show results in a table.
 
 ```{r}
-accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+accel_df %>% group_by(week, dow) %>% 
+  summarize(total_activity = sum(activity_count)) %>% 
+  pivot_wider(
+    names_from = dow,
+    values_from = total_activity
+  ) %>% 
+  select("week", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday") %>% 
   knitr::kable()
 ```
 
-To look at trends, it is better to pipe the results into  `ggplot2`.
+Looking at the table, it seems that the total activity are higher for weekdays when compared to the weekends. However, we see that there are two extreme outliers on the Saturday of weeks 4 and 5. Interestingly, both observations have a total activity count of 1440, which corresponds to the number of minutes in a day. It is possible that these were erroneous measurements. 
 
-First we can look at whether the total activity changes as the weeks go on. It does not seem like there is any obvious trend, maybe a slight decrease of total activity near the end of five-week period. There are two notable days with very low total activity.  
+To look at trends, we can generate some quick plots by piping the results into `ggplot2`.
+
+Here, I want to look at three trends:
+
+* Does the total activity change as the weeks go on?
+
+* How does the activity level during the week compares with the weekends?
+
+* Is there any notably trend of activity level associated with the day of the week?
+
 ```{r}
-accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+num_of_week = accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
   ggplot(aes(x = day_id, y = total_activity)) +
   geom_point() + geom_line()
-```
 
-Next, we can compare weekday over weekend. However, this comparison is also significantly affected by the two Saturday outliers. 
-
-```{r}
-accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+weekend_plot = accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
   ggplot(aes(x = weekend, y = total_activity)) +
   geom_boxplot()
-```
 
-We can also compare each day of the week. If we look at this plot, it seems like in general, weekends (Fridays, Saturdays, Sundays) have slightly higher total activity than the weekdays. We see the Saturday is significantly affected by the two extremely low measurements. 
-
-```{r}
-accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
+dow_plot = accel_df %>% group_by(week, day_id, dow, weekend) %>% summarize(total_activity = sum(activity_count)) %>% 
   ggplot(aes(x = dow, y = total_activity)) +
   geom_boxplot() + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+  theme(axis.text.x = element_text(angle = 60, vjust = 0.5, hjust = 1))
+
+num_of_week / weekend_plot / dow_plot
 ```
+
+Looking at the quick plots, we can see that:
+
+* It does not seem like there is any obvious trend in total activity as the weeks go on. One can argue there may be a slight decrease of total activity near the end of five-week period.   
+
+* On average, it seems that weekdays have higher total activity when compared to the weekend.
+
+* Looking across the week, we see that Wednesdays, Fridays, and arguably, Sundays, have higher total activity count. Comparing to weekdays, the total activity for the weekends have larger range.
+
+* All three plots are affected by the extreme outliers stated earlier.
+
 
 ## 24-hour activity time courses
 
 Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week.
 
 ```{r}
-accel_df %>% group_by(week, day_id) %>% 
+accel_df %>% 
+  group_by(week, day_id) %>% 
   ggplot(aes(x = min_of_day, y = activity_count, colour = dow)) +
   geom_line() +
   labs(
-    title = "24-hour activity time course plot",
+    title = "24-hour Activity Time Course Plot",
     x = "Hour of the day (hr)",
     y = "Activity count",
     colour = "Day of the week"
@@ -277,6 +299,8 @@ tmax_avg = weather_df %>%
     breaks = c(-15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40)
   ) + 
   theme(axis.text.x = element_text(angle = 60, vjust = 0.5, hjust = 1))
+
+tmax_avg
 ```
 
 It seems that the average maximum temperature for both January and July are oscillating on a 2-year cycle. One can also argue that there is a slight increase from 1980 to 2010. More extreme values; also some outliers;
@@ -284,27 +308,36 @@ It seems that the average maximum temperature for both January and July are osci
 
 ## Two-panel for `tmax` vs `tmin` and snowfall distribution
 
+We now want a two-panel showing 
+
+* `tmax` vs. `tmin` for the full dataset
+
+* a plot showing the distribution of snowfall values greater than 0 and less than 100 separetely by year
+
 ```{r}
 tmin_tmax = weather_df %>% 
   ggplot(aes(x = tmin, y = tmax)) +
   geom_hex() +
   theme(legend.position = "right") +
     labs(
-      title = "Maximum and Minimum Temperature of New York State in Years 1981 to 2010",
+      title = "Maximum and Minimum Temperature of 
+      New York State in Years 1981 to 2010",
     x = "Minimum temperature (C)",
     y = "Maximum temperature (C)") +
    scale_x_continuous(
     breaks = c(-60, -40, -20, 0, 20, 40, 60)) +
   scale_y_continuous(
     breaks = c(-60, -40, -20, 0, 20, 40, 60)
-  ) 
+  ) + 
+  theme(legend.position = "bottom")
 
 snowfall_dist = weather_df %>% 
   filter(snow == c(1:99)) %>% 
   group_by(year) %>% 
   ggplot(aes(x = snow, y = as.factor(year))) + geom_density_ridges(scale = 0.85) +
   labs(
-      title = "Snowfall Values (mm) in New York from 1981 to 2010",
+      title = "Snowfall Values (mm) in New York 
+      from 1981 to 2010",
     x = "Snowfall (mm)",
     y = "Year") +
    scale_x_continuous(
